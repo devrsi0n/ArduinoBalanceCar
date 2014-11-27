@@ -1,6 +1,6 @@
 
 
-void argsAdjustSaveDate(unsigned char btCommand)
+void argsAdjustSaveData(unsigned char btCommand)
 {
     if(btCommand == 'P') // adjust angle args P&D
     {
@@ -38,7 +38,7 @@ void argsAdjustSaveDate(unsigned char btCommand)
     }
 }
 
-void returnArgsDate(void)
+void returnArgsData(void)
 {
     int angleP = (int)(CarArgs.angleCtrlP * 100);
     int angleD = (int)(CarArgs.angleCtrlD * 100);

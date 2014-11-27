@@ -16,7 +16,7 @@ void setup(void)
     initEncoders();
     pinMode(DEBUG_LIGHT_PIN, OUTPUT);
 
-    TWBR = ((16000000 / 500000) - 16) / 2;    // setup i2c clock 500kHz
+    TWBR = ((16000000 / 500000) - 16) / 2;    // setup i2c clock to 500kHz
     Wire.begin();
     Serial.begin(115200);
     Serial3.begin(115200); // bluetooth use serial port 3
@@ -24,13 +24,14 @@ void setup(void)
     accelgyro.initialize();
     initAnglePID();
 
-    Timer1.initialize(1000); // set timer interruption time(ms)
+    Timer1.initialize(2000); // set timer interruption time(us)
     Timer1.attachInterrupt(timerIsr); // start timer
 }
 
 void loop(void)
 {
     debugLight();
+    printAngle();
     if(btCommand == 't')
     {
         Timer1.detachInterrupt();
@@ -40,7 +41,7 @@ void loop(void)
         argumentsAdjust(); // change to argsAdjust state
         argsAdjustState();
 
-        Timer1.initialize(1000);
+        Timer1.initialize(2000);
         Timer1.attachInterrupt(timerIsr);
         attachInterrupt(4, encoderLeft,  FALLING);
         attachInterrupt(5, encoderRight, FALLING);
@@ -58,7 +59,7 @@ void debugLight(void)
 {
     static int counter = 0;
     static boolean flag = false;
-    if(counter++ == 10000)
+    if(counter++ == 1000)
     {
         counter = 0;
         if (flag == true)
@@ -66,11 +67,27 @@ void debugLight(void)
         else
             flag = true;
     }
-
-    if (flag)
+    if(flag)
+    {
+        // Serial.println("t");
         digitalWrite(DEBUG_LIGHT_PIN, HIGH);
+    }
     else
+    {
         digitalWrite(DEBUG_LIGHT_PIN, LOW);
+    }
+}
+
+void printAngle(void)
+{
+    static int counter = 0;
+    if(counter++ == 1000) {
+        counter = 0;
+        Serial.print(original_angle);
+        Serial.print(",");
+        Serial.println(board_angle);
+        // Serial.println(angle_input);
+    }
 }
 
 /*

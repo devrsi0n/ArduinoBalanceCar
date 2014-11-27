@@ -44,7 +44,7 @@ MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
-double angle_input, angle_output;
+double angle_input = 0, angle_output = 0;
 double angle_setpoint = -0.089055;
 double kp, ki, kd;
 PID angle_pid(&angle_input, &angle_output, &angle_setpoint, kp, ki, kd, DIRECT);

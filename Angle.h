@@ -1,7 +1,8 @@
 #ifndef __ANGLE__H
 #define __ANGLE__H
 
-
+extern int16_t ax, ay, az;
+extern int16_t gx, gy, gz;
 
 volatile float original_angle = 0;
 volatile float original_gyro  = 0;

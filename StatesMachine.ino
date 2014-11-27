@@ -26,7 +26,7 @@ void statesMachine(void)
         static int counter = 0;
         if(board_angle > 2 || board_angle < -2)
             counter = 0;
-        if(counter++ == 2000) // hold level and wait for 2 second
+        if(counter++ == 1000) // hold level and wait for 2 second(2ms x 1000).
         {
             boardLevel();
             counter = 0;
@@ -112,6 +112,7 @@ void standBalanceState(void)
         case 1:
             getOriginalAngleGyro();
             angleFilter();
+            angleCtrlPID();
             break;
         case 2:
             sampleSpeed();
@@ -124,10 +125,20 @@ void standBalanceState(void)
             break;
         case 4:
             motorsOutput();
+            if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
+            {
+                returnArgsData();
+                btCommand = 0;
+            }
+            else if(btCommand == 'g')
+            {
+                Serial3.println(board_angle);
+                btCommand = 0;
+            }
             break;
         default:
             Serial.println("standBalanceState error!");
-            while(1); //
+            while(1); //stop here
     }
 
     if(++i == 5)
@@ -144,10 +155,51 @@ void bluetoothCtrlState(void)
 
 void emergencyBrakeState(void)
 {
-    angle_ctrl_output = 0;
-    speed_ctrl_output = 0;
-    direction_ctrl_output = 0;
-    motorsOutput();
+    static int j = 0;
+    static int counter = 0;
+
+    switch(j)
+    {
+        case 0:
+            readSampleMPU6050();
+            break;
+        case 1:
+            getOriginalAngleGyro();
+            angleFilter();
+            break;
+        case 2:
+            if(angle_ctrl_output > 0)
+                --angle_ctrl_output;
+            else if(angle_ctrl_output < 0)
+                ++angle_ctrl_output;
+            if(speed_ctrl_output > 0)
+                --speed_ctrl_output;
+            else if(speed_ctrl_output < 0)
+                ++speed_ctrl_output;
+            if(direction_ctrl_output > 0)
+                --direction_ctrl_output;
+            else if(direction_ctrl_output < 0)
+                ++direction_ctrl_output;
+            motorsOutput();
+            break;
+        case 3:
+            if(btCommand == 'e')
+            {
+                btCommand = 0;
+                returnArgsData();
+            }
+            if(++counter == 100)
+            {
+                counter = 0;
+                Serial3.println(board_angle);
+            }
+            break;
+        default:
+            Serial3.println("emergencyBrakeState error");
+            while(1);
+    }
+    if(++j == 4)
+        j = 0;
 }
 
 void lockInState(void)
@@ -175,11 +227,11 @@ void argsAdjustState(void)
             ;
     }
     Serial3.println(btCommand);
-    argsAdjustSaveDate(btCommand);
+    argsAdjustSaveData(btCommand);
     getAnglePD();
     // getSpeedPI();
     // getMotorDeadVal();
-    returnArgsDate();
+    returnArgsData();
 
     while(!Serial3.available())
         ;

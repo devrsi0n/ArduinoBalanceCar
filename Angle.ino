@@ -3,7 +3,7 @@
 void initAnglePID(void)
 {
     angle_pid.SetOutputLimits(PWM_MIN, PWM_MAX);
-    angle_pid.SetSampleTime(5);
+    angle_pid.SetSampleTime(10);
     angle_pid.SetMode(AUTOMATIC);
     getAnglePD();
     angle_pid.SetTunings(CarArgs.angleCtrlP, 0, CarArgs.angleCtrlD);
@@ -22,6 +22,7 @@ void getOriginalAngleGyro(void)
     original_angle = (float)atan(y_accel / z_accel) * 180.0 / PI;
     float gx_revise = gx + GRY_OFFSET;
     original_gyro = GYR_GAIN * gx_revise;
+
 }
 
 void angleFilter(void)
@@ -34,6 +35,12 @@ void angleFilter(void)
 
     float klm_angle = kalmanFilter(original_angle, original_gyro, delta_time);
     board_angle = complementary2Filter(klm_angle, original_gyro, delta_time);
+
+    board_angle = constrain(board_angle, MIN_ANGLE, MAX_ANGLE); // board angle limit
+    // Serial.println(board_angle);
+    // Serial.print(original_angle);
+    // Serial.print(",");
+    // Serial.println(board_angle);
 }
 
 void angleCtrlPID(void)
@@ -41,6 +48,7 @@ void angleCtrlPID(void)
     angle_input = board_angle;
     angle_pid.Compute();
     angle_ctrl_output = angle_output;
+    // Serial.println(board_angle);
 }
 
 
@@ -63,6 +71,7 @@ float kalmanFilter(float angle, float gyro, float delta_time)
     float K_0 = P[0][0] / (P[0][0] + R_ANGLE);
     float K_1 = P[1][0] / (P[0][0] + R_ANGLE);
     bias += K_1 * (angle - klm_angle);
+    klm_angle += K_0 * (angle - klm_angle);
     P[0][0] -= K_0 * P[0][0];
     P[0][1] -= K_0 * P[0][1];
     P[1][0] -= K_1 * P[0][0];

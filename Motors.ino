@@ -130,13 +130,13 @@ void setMotorsVoltage(float pwm_left, float pwm_right)
     if(pwm_output_left < 0)
     {
         pwm_output_left = -pwm_output_left;
-        digitalWrite(LEFT_IN1_PIN, LOW);
-        digitalWrite(LEFT_IN2_PIN, HIGH);
+        digitalWrite(LEFT_IN1_PIN, HIGH);
+        digitalWrite(LEFT_IN2_PIN, LOW);
     }
     else
     {
-        digitalWrite(LEFT_IN1_PIN, HIGH);
-        digitalWrite(LEFT_IN2_PIN, LOW);
+        digitalWrite(LEFT_IN1_PIN, LOW);
+        digitalWrite(LEFT_IN2_PIN, HIGH);
     }
     analogWrite(LEFT_PWM_PIN, pwm_output_left);
 
@@ -144,13 +144,13 @@ void setMotorsVoltage(float pwm_left, float pwm_right)
     if(pwm_output_right < 0)
     {
         pwm_output_right = -pwm_output_right;
-        digitalWrite(RIGHT_IN1_PIN, LOW);
-        digitalWrite(RIGHT_IN2_PIN, HIGH);
+        digitalWrite(RIGHT_IN1_PIN, HIGH);
+        digitalWrite(RIGHT_IN2_PIN, LOW);
     }
     else
     {
-        digitalWrite(RIGHT_IN1_PIN, HIGH);
-        digitalWrite(RIGHT_IN2_PIN, LOW);
+        digitalWrite(RIGHT_IN1_PIN, LOW);
+        digitalWrite(RIGHT_IN2_PIN, HIGH);
     }
     analogWrite(RIGHT_PWM_PIN, pwm_output_right);
 }
