@@ -1,6 +1,6 @@
+#include "Bluetooth.h"
 
-
-void argsAdjustSaveData(unsigned char btCommand)
+void argsAdjustSaveData(char btCommand)
 {
     if(btCommand == 'P') // adjust angle args P&D
     {
@@ -50,7 +50,7 @@ void returnArgsData(void)
     Serial3.println(angleP);
     Serial3.print("D:");
     Serial3.println(angleD);
-    Serial3.print("P");
+    Serial3.print("P:");
     Serial3.println(speedP);
     Serial3.print("I:");
     Serial3.println(speedI);
@@ -66,7 +66,9 @@ void sendCarSpeed(void)
     Serial3.print("L:");
     Serial3.println(speedL);
     Serial3.print("R:");
-    Serial3.print(speedR);
+    Serial3.println(speedR);
+    Serial3.print("Set speed:");
+    Serial3.println(set_car_speed);
 }
 
 /*
@@ -75,20 +77,22 @@ void sendCarSpeed(void)
 static int str2int(void)
 {
     byte buffer[10] = {0};
-    unsigned char tempChar = 0;
+    char tempChar = 0;
     int counter  = 0;
     int counter2 = 0;
     int index   = 0;
     int mask = 1;
     int result = 0;
 
-    while(!Serial.available())
+    while(!Serial3.available())
         ;// Wait
-    while((tempChar = (unsigned char)Serial3.read()) != '%')
+    while((tempChar = (char)Serial3.read()) != '%')
     {
         Serial3.print(tempChar);
         if(tempChar >= '0' && tempChar <= '9')
+        {
             buffer[counter++] = tempChar;
+        }
         while(!Serial3.available())
             ;
     }

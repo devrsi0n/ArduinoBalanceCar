@@ -25,8 +25,8 @@ void initMotors(void)
 
 void initEncoders(void)
 {
-    pinMode(LEFT_ENCODER_PIN, OUTPUT);
-    pinMode(RIGHT_ENCODER_PIN, OUTPUT);
+    pinMode(LEFT_ENCODER_PIN,  INPUT);
+    pinMode(RIGHT_ENCODER_PIN, INPUT);
 
     attachInterrupt(4, encoderLeft,  FALLING); // open external interrupt #4
     attachInterrupt(5, encoderRight, FALLING);
@@ -36,19 +36,20 @@ void sampleSpeed(void)
 {
     static int time_counter = 0;
     static unsigned long past_micros = 0;
-    unsigned long curr_micros = micros();
-    float dt = (curr_micros - past_micros) / 1000000.0;
-    past_micros = curr_micros;
 
     if(time_counter++ == 20)
     {
         time_counter = 0;
 
+        unsigned long curr_micros = micros();
+        float dt = (float)(curr_micros - past_micros);
+        past_micros = curr_micros;
+
         detachInterrupt(4); // close external interrupt #4
         detachInterrupt(5); // close external interrupt #5
 
-        rpm_left  = count_left  * 60.0 * (1000.0 / dt) / (400.0 * 32.0);
-        rpm_right = count_right * 60.0 * (1000.0 / dt) / (400.0 * 32.0);
+        rpm_left  = (float)count_left  * 60.0 * (1000000.0 / dt) / (400.0 * 32.0);
+        rpm_right = (float)count_right * 60.0 * (1000000.0 / dt) / (400.0 * 32.0);
         count_left  = 0;
         count_right = 0;
         attachInterrupt(4, encoderLeft,  FALLING); // reopen interrupt
@@ -56,7 +57,7 @@ void sampleSpeed(void)
     }
 
 #ifdef _PRINT_SPEED
-    Serial.print("Speed:")
+    Serial.print("Speed:");
     Serial.print(rpm_left);
     Serial.print(",");
     Serial.println(rpm_right);
@@ -77,22 +78,84 @@ void encoderRight(void)
 
 void speedCtrl(void)
 {
-
+    static int time_counter = 0;
+    if(time_counter++ == SPEED_CTRL_PERIOD)
+    {
+        time_counter = 0;
+        if(next_state == bluetoothCtrl && btCommand == 'w')
+        {
+            Serial3.println(btCommand); // let us know whether the bluetooth command come into controller.
+            set_car_speed += 20;
+            sendCarSpeed();
+            btCommand = 0;
+        }
+        else if(next_state == bluetoothCtrl && btCommand == 's')
+        {
+            Serial3.println(btCommand);
+            set_car_speed -= 20;
+            sendCarSpeed();
+            btCommand = 0;
+        }
+        set_car_speed = constrain(set_car_speed, SPEED_LIMIT_MIN, SPEED_LIMIT_MAX);
+        float average_speed = (rpm_left + rpm_right) / 2.0;
+        speed_ctrl_total_output = computeSpeedPID(set_car_speed, average_speed);
+    }
 }
+
 
 void speedCtrlOutput(void)
 {
+    static int counter = 0;
+    static float speed_output_old = 0;
+    float delta_speed_output = 0;
+    float speed_output_new = speed_ctrl_total_output;
 
+    delta_speed_output =  speed_output_new - speed_output_old;
+    speed_ctrl_output = counter * delta_speed_output / SPEED_CTRL_PERIOD + speed_output_old;
+    if(counter++ == SPEED_CTRL_PERIOD)
+    {
+        counter = 0;
+        speed_output_old = speed_output_new;
+    }
 }
 
 void directionCtrl(void)
 {
+    static int time_counter = 0;
 
+    if(time_counter++ == DIRECTION_CTRL_PERIOD)
+    {
+        time_counter = 0;
+        direction_ctrl_total_output = 0;
+        if(next_state == bluetoothCtrl && btCommand == 'a')
+        {
+            Serial3.println(btCommand);
+            direction_ctrl_total_output = 30;
+            btCommand = 0;
+
+        }
+        else if(next_state == bluetoothCtrl && btCommand == 'd')
+        {
+            Serial3.println(btCommand);
+            direction_ctrl_total_output = -30;
+            btCommand = 0;
+        }
+    }
 }
 
 void directionCtrlOutput(void)
 {
+    static int counter = 0;
+    static float direction_output_old = 0;
+    float direction_output_new = direction_ctrl_total_output;
+    float delta_direction_output = direction_output_new - direction_output_old;
 
+    direction_ctrl_output = delta_direction_output * counter / DIRECTION_CTRL_PERIOD + direction_output_old;
+    if(counter++ == DIRECTION_CTRL_PERIOD)
+    {
+        counter = 0;
+        direction_output_old = direction_output_new;
+    }
 }
 
 void motorsOutput(void)
@@ -169,4 +232,20 @@ void setPWMFrequency(byte mode)
         TCCR2B = TCCR2B & 0b11111000 | mode;
     }
 }
+
+float computeSpeedPID(float set_speed, float average_speed)
+{
+    static float intergral = 0;
+    float result = 0;
+    float delta_speed = (set_speed - average_speed);
+    float fP = delta_speed * CarArgs.speedCtrlP;
+    float fI = delta_speed * CarArgs.speedCtrlI;
+
+    intergral += fI;
+    intergral = constrain(intergral, INTERGRAL_MIN, INTERGRAL_MAX);
+    result = fP + intergral;
+
+    return result;
+}
+
 

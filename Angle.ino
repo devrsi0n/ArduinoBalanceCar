@@ -5,10 +5,8 @@ void initAnglePID(void)
     angle_pid.SetOutputLimits(PWM_MIN, PWM_MAX);
     angle_pid.SetSampleTime(10);
     angle_pid.SetMode(AUTOMATIC);
-    getAnglePD();
     angle_pid.SetTunings(CarArgs.angleCtrlP, 0, CarArgs.angleCtrlD);
 }
-
 
 void readSampleMPU6050(void)
 {
@@ -17,6 +15,10 @@ void readSampleMPU6050(void)
 
 void getOriginalAngleGyro(void)
 {
+#define GRY_OFFSET  296
+#define GYR_GAIN    0.00763
+#define ACC_GAIN    0.000061
+
     double y_accel = ay * ACC_GAIN;
     double z_accel = az * ACC_GAIN;
     original_angle = (float)atan(y_accel / z_accel) * 180.0 / PI;
@@ -37,10 +39,6 @@ void angleFilter(void)
     board_angle = complementary2Filter(klm_angle, original_gyro, delta_time);
 
     board_angle = constrain(board_angle, MIN_ANGLE, MAX_ANGLE); // board angle limit
-    // Serial.println(board_angle);
-    // Serial.print(original_angle);
-    // Serial.print(",");
-    // Serial.println(board_angle);
 }
 
 void angleCtrlPID(void)
@@ -48,9 +46,7 @@ void angleCtrlPID(void)
     angle_input = board_angle;
     angle_pid.Compute();
     angle_ctrl_output = angle_output;
-    // Serial.println(board_angle);
 }
-
 
 float kalmanFilter(float angle, float gyro, float delta_time)
 {
@@ -86,6 +82,7 @@ float kalmanFilter(float angle, float gyro, float delta_time)
 float complementary2Filter(float angle, float gyro, float delta_time)
 {
 #define K       3.5
+
     static float com2_angle = 0;
     static float y1 = 0;
 

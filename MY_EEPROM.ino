@@ -16,3 +16,13 @@ int readIntFromEEPROM(int address)
     int value = (high << 8) + low;
     return value;
 }
+
+void clearEEPROM(void)
+{
+    int i;
+    for(i = 0; i < 4096; i++)
+    {
+        EEPROM.write(i, 0);
+    }
+}
+
