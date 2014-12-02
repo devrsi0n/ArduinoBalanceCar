@@ -33,7 +33,7 @@ struct CarArguments{
 // #define _PRINT_SPEED
 
 
-#define DEBUG_LIGHT_PIN 13
+#define RUNNING_LIGHT_PIN 13
 
 #define PWM_MIN     -252
 #define PWM_MAX      252
@@ -46,19 +46,21 @@ struct CarArguments{
 
 #define MOTOR_OUT_DEAD_VAL 0
 
-// MPU6050 args set up
+// set up MPU6050 args
 MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
+// set up angle PID args
 double angle_input = 0, angle_output = 0;
 double angle_setpoint = 0.326865; //-1.777692; //-0.089055;
 double kp, ki, kd;
 PID angle_pid(&angle_input, &angle_output, &angle_setpoint, kp, ki, kd, DIRECT);
 
-
+// bluetooth command for argments adjust and control
 volatile char btCommand = 0;
 
+// set car's speed for speed PID control
 volatile int set_car_speed = 0;
 
 #endif

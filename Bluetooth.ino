@@ -1,5 +1,8 @@
 #include "Bluetooth.h"
 
+/*
+* adjust argments by bluetooth and save data to EEPROM
+*/
 void argsAdjustSaveData(char btCommand)
 {
     if(btCommand == 'P') // adjust angle args P&D
@@ -38,35 +41,35 @@ void argsAdjustSaveData(char btCommand)
     }
 }
 
-void returnArgsData(void)
+void sendArgsData(void)
 {
-    int angleP = (int)(CarArgs.angleCtrlP * 100);
-    int angleD = (int)(CarArgs.angleCtrlD * 100);
-    int speedP = (int)(CarArgs.speedCtrlP * 100);
-    int speedI = (int)(CarArgs.speedCtrlI * 100);
-    int deadVal= (int)(CarArgs.motorDeadVal * 100);
+    // int angleP = (int)(CarArgs.angleCtrlP * 100);
+    // int angleD = (int)(CarArgs.angleCtrlD * 100);
+    // int speedP = (int)(CarArgs.speedCtrlP * 100);
+    // int speedI = (int)(CarArgs.speedCtrlI * 100);
+    // int deadVal= (int)(CarArgs.motorDeadVal * 100);
 
     Serial3.print("P:");
-    Serial3.println(angleP);
+    Serial3.println(CarArgs.angleCtrlP, 2);
     Serial3.print("D:");
-    Serial3.println(angleD);
+    Serial3.println(CarArgs.angleCtrlD, 2);
     Serial3.print("P:");
-    Serial3.println(speedP);
+    Serial3.println(CarArgs.speedCtrlP, 2);
     Serial3.print("I:");
-    Serial3.println(speedI);
+    Serial3.println(CarArgs.speedCtrlI, 2);
     Serial3.print("V:");
-    Serial3.println(deadVal);
+    Serial3.println(CarArgs.motorDeadVal, 2);
 }
 
 void sendCarSpeed(void)
 {
-    int speedL = (int)rpm_left;
-    int speedR = (int)rpm_right;
+    // int speedL = (int)rpm_left;
+    // int speedR = (int)rpm_right;
 
     Serial3.print("L:");
-    Serial3.println(speedL);
+    Serial3.println(rpm_left, 2);
     Serial3.print("R:");
-    Serial3.println(speedR);
+    Serial3.println(rpm_right, 2);
     Serial3.print("Set speed:");
     Serial3.println(set_car_speed);
 }
@@ -77,10 +80,10 @@ void sendCarSpeed(void)
 static int str2int(void)
 {
     byte buffer[10] = {0};
-    char tempChar = 0;
-    int counter  = 0;
-    int counter2 = 0;
-    int index   = 0;
+    char tempChar   = 0;
+    int counter     = 0;
+    int counter2    = 0;
+    int index       = 0;
     int mask = 1;
     int result = 0;
 

@@ -7,7 +7,6 @@
 #define LEFT_PWM_PIN    9
 #define LEFT_IN1_PIN    4
 #define LEFT_IN2_PIN    5
-
 #define RIGHT_PWM_PIN   10
 #define RIGHT_IN1_PIN   6
 #define RIGHT_IN2_PIN   7
@@ -15,7 +14,15 @@
 // define encoder pins for measure car's speed
 #define LEFT_ENCODER_PIN    19
 #define RIGHT_ENCODER_PIN   18
+// define derection pins to measure car's direction
+#define LEFT_DIRECTION_PIN  16
+#define RIGHT_DIRECTION_PIN 17
 
+// limit speed & intergral max value
+#define SPEED_LIMIT_MIN     -60
+#define SPEED_LIMIT_MAX      60
+#define INTERGRAL_MIN       -25
+#define INTERGRAL_MAX        25
 
 // PWM frequency selector
 #define HZ_31250        1
@@ -24,15 +31,10 @@
 #define HZ_122          4
 #define HZ_30           5
 
-// limit speed & intergral max value
-#define SPEED_LIMIT_MIN     -60
-#define SPEED_LIMIT_MAX      60
-#define INTERGRAL_MIN       -25
-#define INTERGRAL_MAX        25
-
 // control period
-#define SPEED_CTRL_PERIOD        20
+#define SPEED_CTRL_PERIOD        10
 #define DIRECTION_CTRL_PERIOD    10
+#define SAMPLE_SPEED_PERIOD      10
 
 // args for speed sample
 volatile float rpm_left = 0; // car's speed (rotations per minute)

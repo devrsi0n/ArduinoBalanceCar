@@ -1,12 +1,11 @@
 #include "StatesMachine.h"
+
 /*******************************************************
 * States machine: when reach to a condition, switch
 *   to another state. But, there is a special state, if
 *   enter into argsAdjustState, stop timer and receved
-*   args and write into the EEPROM.
+*   args and write args into the EEPROM.
 *******************************************************/
-
-
 
 void statesMachine(void)
 {
@@ -68,6 +67,10 @@ void statesMachine(void)
     }
 }
 
+/*
+* if current state is emgencyBrakeState and angle is [-5, 5](wait for a couple seconds),
+* swtich state to standBalance state.
+*/
 void boardLevel(void)
 {
     curr_state = next_state;
@@ -82,6 +85,9 @@ void bluetoothCtrlReady(void)
         next_state = bluetoothCtrl;
 }
 
+/*
+* if angle beyond (-15, 15) degree, swtich state to emergencyBrake state.
+*/
 void angleOutOfRange(void)
 {
     curr_state = next_state;
@@ -89,6 +95,9 @@ void angleOutOfRange(void)
         next_state = emergencyBrake;
 }
 
+/*
+* if bluetooth send char 'l', swtich state to lockIn state.
+*/
 void lockCar(void)
 {
     curr_state = next_state;
@@ -96,6 +105,9 @@ void lockCar(void)
         next_state = lockIn;
 }
 
+/*
+* if bluetooth send char 'u', swtich state to emergencyBrake state.
+*/
 void unlockCar(void)
 {
     curr_state = next_state;
@@ -103,6 +115,9 @@ void unlockCar(void)
         next_state = emergencyBrake;
 }
 
+/*
+* if bluetooth send char 't', swtich state to argsAdjust state.
+*/
 void argumentsAdjust(void)
 {
     curr_state = next_state;
@@ -137,7 +152,7 @@ void standBalanceState(void)
         motorsOutput();
         if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
         {
-            returnArgsData();
+            sendArgsData();
             btCommand = 0;
         }
         else if(btCommand == 'g')
@@ -151,7 +166,7 @@ void standBalanceState(void)
         while(1); //stop here
     }
 
-    if(++i == 5)
+    if(++i >= 5)
         i = 0;
 }
 
@@ -183,7 +198,7 @@ void bluetoothCtrlState(void)
         if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
         {
             Serial3.println(btCommand);
-            returnArgsData();
+            sendArgsData();
             btCommand = 0;
         }
         else if(btCommand == 'g')
@@ -203,7 +218,7 @@ void bluetoothCtrlState(void)
         Serial3.println("bluetoothCtrlState error!");
         while(1); //stop here
     }
-    if(++j == 5)
+    if(++j >= 5)
         j = 0;
 }
 
@@ -224,6 +239,7 @@ void emergencyBrakeState(void)
         angleFilter();
         break;
     case 3:
+        // slow down motors pwm value gentle.
         if(angle_ctrl_output > 0)
             --angle_ctrl_output;
         else if(angle_ctrl_output < 0)
@@ -242,19 +258,19 @@ void emergencyBrakeState(void)
         if(btCommand == 'e')
         {
             btCommand = 0;
-            returnArgsData();
+            sendArgsData();
         }
-        if(++counter == 100)
+        if(++counter == 50) // --> 2 x 5 x 50 = 500ms
         {
             counter = 0;
-            Serial3.println(board_angle);
+            Serial3.println(board_angle); // send board's angle per 0.5 second
         }
         break;
     default:
         Serial3.println("emergencyBrakeState error");
         while(1);
     }
-    if(++k == 5)
+    if(++k >= 5)
         k = 0;
 }
 
@@ -293,14 +309,14 @@ void lockInState(void)
         if(btCommand == 'e')
         {
             btCommand = 0;
-            returnArgsData();
+            sendArgsData();
         }
         break;
     default:
         Serial3.println("lockInState error");
         while(1);
     }
-    if(++l == 5)
+    if(++l >= 5)
         l = 0;
 }
 
@@ -309,7 +325,8 @@ void argsAdjustState(void)
     float left_value  = angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
     float right_value = angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
-    while(left_value != 0 || right_value != 0) // slow down motors gentle
+    // slow down motors pwm value gentle.
+    while(left_value != 0 || right_value != 0)
     {
         if(left_value > 0)
             --left_value;
@@ -325,7 +342,7 @@ void argsAdjustState(void)
     while(!Serial3.available())
         ;
     btCommand = Serial3.read();
-    while(btCommand != 'p' && btCommand != 'i' && btCommand != 'v')
+    while(btCommand != 'p' && btCommand != 'i' && btCommand != 'v') // 'p' --> save angle PID args, 'i' --> save speed PID args, 'v' --> save motor dead value
     {
         btCommand = Serial3.read();
         while(!Serial3.available())
@@ -336,7 +353,7 @@ void argsAdjustState(void)
     getAnglePD();
     getSpeedPI();
     getMotorDeadVal();
-    returnArgsData();
+    sendArgsData();
 
     while(!Serial3.available())
         ;

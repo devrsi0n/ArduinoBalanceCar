@@ -11,3 +11,12 @@ Dscription: fix many logic bugs, tested motors, read mup6050 ok, angle filter ok
 	or EEPROM or encoders.(Just modify angle control PID argments by manual operation that download firmware every time).
 
 /***3***/
+#Date: 2014.12.2
+@author: qianmofeiyu
+Dscription: add more comments, add code that caculate car direction by encoders,
+	and adjust speed sample period & speed control period.
+	
+/***4***/
+	
+
+

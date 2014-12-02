@@ -22,11 +22,13 @@ void initMotors(void)
     digitalWrite(RIGHT_IN2_PIN, LOW);
 }
 
-
 void initEncoders(void)
 {
     pinMode(LEFT_ENCODER_PIN,  INPUT);
     pinMode(RIGHT_ENCODER_PIN, INPUT);
+
+    pinMode(LEFT_DIRECTION_PIN, INPUT);
+    pinMode(RIGHT_DIRECTION_PIN, INPUT);
 
     attachInterrupt(4, encoderLeft,  FALLING); // open external interrupt #4
     attachInterrupt(5, encoderRight, FALLING);
@@ -37,7 +39,7 @@ void sampleSpeed(void)
     static int time_counter = 0;
     static unsigned long past_micros = 0;
 
-    if(time_counter++ == 20)
+    if(time_counter++ == SAMPLE_SPEED_PERIOD)
     {
         time_counter = 0;
 
@@ -62,6 +64,7 @@ void sampleSpeed(void)
     Serial.print(",");
     Serial.println(rpm_right);
 #endif
+
 }
 
 /*
@@ -69,13 +72,46 @@ void sampleSpeed(void)
 */
 void encoderLeft(void)
 {
-    count_left++;
+    // if the motor is forewarding, it's unnecessary to read direction pin.
+    if (rpm_left > 10.0)
+    {
+        count_left++;
+        return;
+    }
+    if (rpm_left < -10.0)
+    {
+        count_left--;
+        return;
+    }
+    // the motor is forewarding if B line is high level voltage when a falling extern interruption is coming,
+    // otherwise the motor is rollbacking.
+    if (digitalRead(LEFT_DIRECTION_PIN) == HIGH)
+        count_left++;
+    else
+        count_left--;
 }
 void encoderRight(void)
 {
-    count_right++;
+    if (rpm_right > 10.0)
+    {
+        count_right++;
+        return;
+    }
+    if (rpm_left < -10.0)
+    {
+        count_right--;
+        return;
+    }
+
+    if (digitalRead(RIGHT_DIRECTION_PIN) == HIGH)
+        count_right++;
+    else
+        count_right--;
 }
 
+/*
+* caculate speed PID output
+*/
 void speedCtrl(void)
 {
     static int time_counter = 0;
@@ -84,7 +120,7 @@ void speedCtrl(void)
         time_counter = 0;
         if(next_state == bluetoothCtrl && btCommand == 'w')
         {
-            Serial3.println(btCommand); // let us know whether the bluetooth command come into controller.
+            Serial3.println(btCommand); // let operator knows whether the bluetooth command write into controller board.
             set_car_speed += 20;
             sendCarSpeed();
             btCommand = 0;
@@ -102,7 +138,9 @@ void speedCtrl(void)
     }
 }
 
-
+/*
+* speed PID output divide equally
+*/
 void speedCtrlOutput(void)
 {
     static int counter = 0;
@@ -119,6 +157,9 @@ void speedCtrlOutput(void)
     }
 }
 
+/*
+* caculate direction output to 10 parts
+*/
 void directionCtrl(void)
 {
     static int time_counter = 0;
@@ -132,7 +173,6 @@ void directionCtrl(void)
             Serial3.println(btCommand);
             direction_ctrl_total_output = 30;
             btCommand = 0;
-
         }
         else if(next_state == bluetoothCtrl && btCommand == 'd')
         {
@@ -143,6 +183,9 @@ void directionCtrl(void)
     }
 }
 
+/*
+* direction output divide equally to 10 parts
+*/
 void directionCtrlOutput(void)
 {
     static int counter = 0;
@@ -185,6 +228,9 @@ void motorsOutputAdjust(float left_value, float right_value)
     setMotorsVoltage(left_value, right_value);
 }
 
+/*
+* control motor speed and direction by pwm value
+*/
 void setMotorsVoltage(float pwm_left, float pwm_right)
 {
     int pwm_output_left  = (int)round(pwm_left);

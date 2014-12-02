@@ -21,7 +21,7 @@ void setup(void)
 
     initMotors();
     initEncoders();
-    pinMode(DEBUG_LIGHT_PIN, OUTPUT);
+    pinMode(RUNNING_LIGHT_PIN, OUTPUT);
 
     TWBR = ((16000000 / 500000) - 16) / 2;    // setup i2c clock to 500kHz
     Wire.begin();
@@ -37,7 +37,7 @@ void setup(void)
 
 void loop(void)
 {
-    debugLight();
+    runningLight();
     // printAngle();    // uncomment to porint car's angle
     if(btCommand == 't') // 't' ---> stop interrupts and enter the arguments adjust state
     {
@@ -57,12 +57,14 @@ void loop(void)
 
 void timerIsr(void)
 {
-    sei();
-    statesMachine();
+    sei(); // to clear global interrupt bit
+    statesMachine(); // main logic codes write here.
 }
 
-
-void debugLight(void)
+/*
+* if main function is running, light the pin 13
+*/
+void runningLight(void)
 {
     static int counter = 0;
     static boolean flag = false;
@@ -77,11 +79,11 @@ void debugLight(void)
     if(flag)
     {
         // Serial.println("t");
-        digitalWrite(DEBUG_LIGHT_PIN, HIGH);
+        digitalWrite(RUNNING_LIGHT_PIN, HIGH);
     }
     else
     {
-        digitalWrite(DEBUG_LIGHT_PIN, LOW);
+        digitalWrite(RUNNING_LIGHT_PIN, LOW);
     }
 }
 
@@ -100,7 +102,7 @@ void printAngle(void)
 }
 
 /*
-* get angle control PID args(P & D)
+* get angle control PID args(P & D) from EEPROM or macros
 */
 void getAnglePD(void)
 {
@@ -119,6 +121,9 @@ void getAnglePD(void)
     }
 }
 
+/*
+* get angle speed PID args(P & I) from EEPROM or macros
+*/
 void getSpeedPI(void)
 {
     int saved = readIntFromEEPROM(EEPROM_SPEED_PI_SAVED_ADDR);
@@ -136,6 +141,9 @@ void getSpeedPI(void)
     }
 }
 
+/*
+* get dead value from EEPROM or macros
+*/
 void getMotorDeadVal(void)
 {
     int saved = readIntFromEEPROM(EEPROM_MOTOR_DEAD_VAL_SAVED_ADDR);

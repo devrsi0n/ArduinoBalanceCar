@@ -3,7 +3,7 @@
 void initAnglePID(void)
 {
     angle_pid.SetOutputLimits(PWM_MIN, PWM_MAX);
-    angle_pid.SetSampleTime(10);
+    angle_pid.SetSampleTime(10); // 2ms X 5 = 10ms
     angle_pid.SetMode(AUTOMATIC);
     angle_pid.SetTunings(CarArgs.angleCtrlP, 0, CarArgs.angleCtrlD);
 }
@@ -13,18 +13,21 @@ void readSampleMPU6050(void)
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 }
 
+/*
+* caculate original angle and angle velocity.
+*/
 void getOriginalAngleGyro(void)
 {
 #define GRY_OFFSET  296
 #define GYR_GAIN    0.00763
 #define ACC_GAIN    0.000061
+#define PI          3.14159326
 
     double y_accel = ay * ACC_GAIN;
     double z_accel = az * ACC_GAIN;
     original_angle = (float)atan(y_accel / z_accel) * 180.0 / PI;
     float gx_revise = gx + GRY_OFFSET;
     original_gyro = GYR_GAIN * gx_revise;
-
 }
 
 void angleFilter(void)

@@ -1,6 +1,7 @@
 #ifndef __STATESMACHINE__H
 #define __STATESMACHINE__H
 
+// boundary condition
 #define EMERGENCY_BRAKE_ANGLE_MIN     -15
 #define EMERGENCY_BRAKE_ANGLE_MAX      15
 

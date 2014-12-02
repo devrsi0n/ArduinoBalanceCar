@@ -4,8 +4,7 @@
 #define MAX_ANGLE   25
 #define MIN_ANGLE   -25
 
-#define PI          3.14159326
-
+// global args
 extern int16_t ax, ay, az;
 extern int16_t gx, gy, gz;
 
