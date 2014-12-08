@@ -14,11 +14,11 @@ void statesMachine(void)
         btCommand = Serial3.read();
         if(btCommand == 'r') // 'r' ---> bluetooth control "ready"
         {
-            Serial3.println(btCommand); // let us know whether the bluetooth command come into controller.
+            Serial3.println(btCommand); // let us know whether the bluetooth command write into controller.
             bluetoothCtrlReady();
             btCommand = 0;
         }
-        else if (btCommand == 'l') // 'l' ---> "lock" the car
+        else if(btCommand == 'l') // 'l' ---> "lock" the car
         {
             Serial3.println(btCommand);
             lockCar();
@@ -128,6 +128,7 @@ void argumentsAdjust(void)
 void standBalanceState(void)
 {
     static int i = 0;
+    static int counter = 0;
 
     switch(i)
     {
@@ -152,14 +153,21 @@ void standBalanceState(void)
         motorsOutput();
         if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
         {
+            Serial3.println(btCommand);
             sendArgsData();
             btCommand = 0;
         }
         else if(btCommand == 'g')
         {
+            Serial3.println(btCommand);
             Serial3.println(board_angle);
             btCommand = 0;
         }
+        // if(++counter == 20)
+        // {
+        //     counter = 0;
+        //     Serial3.println(board_angle); // send car's angle per 200ms
+        // }
         break;
     default:
         Serial3.println("standBalanceState error!");
@@ -226,6 +234,8 @@ void emergencyBrakeState(void)
 {
     static int k = 0;
     static int counter = 0;
+    static int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+    static int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
     switch(k)
     {
@@ -239,24 +249,21 @@ void emergencyBrakeState(void)
         angleFilter();
         break;
     case 3:
-        // slow down motors pwm value gentle.
-        if(angle_ctrl_output > 0)
-            --angle_ctrl_output;
-        else if(angle_ctrl_output < 0)
-            ++angle_ctrl_output;
-        if(speed_ctrl_output > 0)
-            --speed_ctrl_output;
-        else if(speed_ctrl_output < 0)
-            ++speed_ctrl_output;
-        if(direction_ctrl_output > 0)
-            --direction_ctrl_output;
-        else if(direction_ctrl_output < 0)
-            ++direction_ctrl_output;
-        motorsOutput();
+        // slow down motors gentle.
+        if(left_value > 0)
+            --left_value;
+        else if(left_value < 0)
+            ++left_value;
+        if(right_value > 0)
+            --right_value;
+        else if(right_value < 0)
+            ++right_value;
+        motorsOutputAdjust(left_value, right_value);
         break;
     case 4:
         if(btCommand == 'e')
         {
+            Serial3.println(btCommand);
             btCommand = 0;
             sendArgsData();
         }
@@ -278,6 +285,8 @@ void lockInState(void)
 {
     static int l = 0;
     static int counter = 0;
+    static int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+    static int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
     switch(l)
     {
@@ -291,23 +300,21 @@ void lockInState(void)
         angleFilter();
         break;
     case 3:
-        if(angle_ctrl_output > 0)
-            --angle_ctrl_output;
-        else if(angle_ctrl_output < 0)
-            ++angle_ctrl_output;
-        if(speed_ctrl_output > 0)
-            --speed_ctrl_output;
-        else if(speed_ctrl_output < 0)
-            ++speed_ctrl_output;
-        if(direction_ctrl_output > 0)
-            --direction_ctrl_output;
-        else if(direction_ctrl_output < 0)
-            ++direction_ctrl_output;
-        motorsOutput();
+        // slow down motors gentle.
+        if(left_value > 0)
+            --left_value;
+        else if(left_value < 0)
+            ++left_value;
+        if(right_value > 0)
+            --right_value;
+        else if(right_value < 0)
+            ++right_value;
+        motorsOutputAdjust(left_value, right_value);
         break;
     case 4:
         if(btCommand == 'e')
         {
+            Serial3.println(btCommand);
             btCommand = 0;
             sendArgsData();
         }
@@ -322,10 +329,10 @@ void lockInState(void)
 
 void argsAdjustState(void)
 {
-    float left_value  = angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
-    float right_value = angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
+    int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+    int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
-    // slow down motors pwm value gentle.
+    // slow down motors gentle.
     while(left_value != 0 || right_value != 0)
     {
         if(left_value > 0)
@@ -337,28 +344,33 @@ void argsAdjustState(void)
         else if(right_value < 0)
             ++right_value;
         motorsOutputAdjust(left_value, right_value);
+        delay(5);
     }
 
     while(!Serial3.available())
         ;
     btCommand = Serial3.read();
-    while(btCommand != 'p' && btCommand != 'i' && btCommand != 'v') // 'p' --> save angle PID args, 'i' --> save speed PID args, 'v' --> save motor dead value
+    while((btCommand != 'p') && (btCommand != 'i') && (btCommand != 'v')) // 'p' --> save angle PID args, 'i' --> save speed PID args, 'v' --> save motor dead value
     {
+        Serial3.print(btCommand);
+        Serial3.println(" is NOT \'p\', \'i\' or \'v\'.");
         btCommand = Serial3.read();
         while(!Serial3.available())
             ;
     }
     Serial3.println(btCommand);
-    argsAdjustSaveData(btCommand);
-    getAnglePD();
-    getSpeedPI();
+    argsAdjustSaveData();
+    getAnglePID();
+    getSpeedPID();
     getMotorDeadVal();
     sendArgsData();
 
     while(!Serial3.available())
         ;
-    while((btCommand = Serial3.read()) != 'f')
+    while((btCommand = Serial3.read()) != 'f') // 'f' --> confirm
     {
+        Serial3.print(btCommand);
+        Serial3.println(" is NOT \'f\'.");
         while(!Serial3.available())
             ;
     }

@@ -17,8 +17,14 @@ int readIntFromEEPROM(int address)
     return value;
 }
 
-void clearEEPROM(void)
+/*
+ * if EEPROM is not initialized, clear all EEPROM data
+ */
+void initEEPROM(void)
 {
+    if (readIntFromEEPROM(EEPROM_ANGLE_PID_SAVED_ADDR) == ANGLE_PID_SAVED) // Not clear EEPROM if args already write into EEPROM, otherwise clear EEPROM
+        return;
+
     int i;
     for(i = 0; i < 4096; i++)
     {
