@@ -42,7 +42,7 @@ volatile float rpm_right = 0;
 volatile long count_left  = 0; // counter for left encoder
 volatile long count_right = 0;
 
-// args for speed and direction control output
+// args for speed and direction output
 volatile float speed_ctrl_total_output = 0;
 volatile float direction_ctrl_total_output = 0;
 volatile float speed_ctrl_output = 0;

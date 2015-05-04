@@ -3,41 +3,31 @@
 /*
 * adjust argments by bluetooth and save data to EEPROM
 */
-void argsAdjustSaveData(void)
+void argsAdjustSaveData(char btCommand)
 {
-    if(btCommand == 'p') // adjust angle args
+    if(btCommand == 'P') // adjust angle args P&D
     {
-        btCommand = 0;
+        btCommand = 0; // avoid function re-execution
 
         int angleP = str2int();
         writeIntToEEPROM(EEPROM_ANGLE_P_ADDR, angleP);
-
-        int angleI = str2int();
-        writeIntToEEPROM(EEPROM_ANGLE_I_ADDR, angleI);
-
         int angleD = str2int();
         writeIntToEEPROM(EEPROM_ANGLE_D_ADDR, angleD);
+        writeIntToEEPROM(EEPROM_ANGLE_PD_SAVED_ADDR, ANGLE_PD_SAVED); // set a flag to EEPROM
 
-        writeIntToEEPROM(EEPROM_ANGLE_PID_SAVED_ADDR, ANGLE_PID_SAVED); // set a flag to EEPROM
-
-        Serial3.println("success!");
+        Serial3.println('s'); // mean save date success.
     }
-    else if(btCommand == 'i') // adjust speed args
+    else if(btCommand == 'i') // adjust speed args P&I
     {
         btCommand = 0;
 
         int speedP = str2int();
         writeIntToEEPROM(EEPROM_SPEED_P_ADDR, speedP);
-
         int speedI = str2int();
         writeIntToEEPROM(EEPROM_SPEED_I_ADDR, speedI);
+        writeIntToEEPROM(EEPROM_SPEED_PI_SAVED_ADDR, SPEED_PI_SAVED);
 
-        int speedD = str2int();
-        writeIntToEEPROM(EEPROM_SPEED_D_ADDR, speedD);
-
-        writeIntToEEPROM(EEPROM_SPEED_PID_SAVED_ADDR, SPEED_PID_SAVED);
-
-        Serial3.println("success!");
+        Serial3.println('s'); // mean save date success.
     }
     else if(btCommand  == 'v') // adjust motor dead value
     {
@@ -45,57 +35,43 @@ void argsAdjustSaveData(void)
 
         int motorDeadValue = str2int();
         writeIntToEEPROM(EEPROM_MOTOR_DEAD_VAL_ADDR, motorDeadValue);
-
         writeIntToEEPROM(EEPROM_MOTOR_DEAD_VAL_SAVED_ADDR, MOTOR_DEAD_VAL_SAVED);
 
-        Serial3.println("success!");
+        Serial3.println('s'); // mean save date success.
     }
 }
 
 void sendArgsData(void)
 {
-    int angleP = (int)(CarArgs.angleCtrlP * 100);
-    int angleI = (int)(CarArgs.angleCtrlI * 100);
-    int angleD = (int)(CarArgs.angleCtrlD * 100);
+    // int angleP = (int)(CarArgs.angleCtrlP * 100);
+    // int angleD = (int)(CarArgs.angleCtrlD * 100);
+    // int speedP = (int)(CarArgs.speedCtrlP * 100);
+    // int speedI = (int)(CarArgs.speedCtrlI * 100);
+    // int deadVal= (int)(CarArgs.motorDeadVal * 100);
 
-    int speedP = (int)(CarArgs.speedCtrlP * 100);
-    int speedI = (int)(CarArgs.speedCtrlI * 100);
-    int speedD = (int)(CarArgs.speedCtrlD * 100);
-
-    int deadVal= (int)(CarArgs.motorDeadVal * 100);
-
-    // print angle PID args
-    Serial3.print("angle\nP:");
-    Serial3.print(angleP);
-    Serial3.print("\tI:");
-    Serial3.print(angleI);
-    Serial3.print("\tD:");
-    Serial3.println(angleD);
-
-    // print speed PID args
-    Serial3.print("speed\nP:");
-    Serial3.print(speedP);
-    Serial3.print("\tI:");
-    Serial3.print(speedI);
-    Serial3.print("\tD:");
-    Serial3.println(speedD);
-
-    // print motor dead value
-    Serial3.print("mV:");
-    Serial3.println(deadVal);
+    Serial3.print("P:");
+    Serial3.println(CarArgs.angleCtrlP, 2);
+    Serial3.print("D:");
+    Serial3.println(CarArgs.angleCtrlD, 2);
+    Serial3.print("P:");
+    Serial3.println(CarArgs.speedCtrlP, 2);
+    Serial3.print("I:");
+    Serial3.println(CarArgs.speedCtrlI, 2);
+    Serial3.print("V:");
+    Serial3.println(CarArgs.motorDeadVal, 2);
 }
 
 void sendCarSpeed(void)
 {
-    int speedL = (int)rpm_left;
-    int speedR = (int)rpm_right;
+    // int speedL = (int)rpm_left;
+    // int speedR = (int)rpm_right;
 
+    Serial3.print("L:");
+    Serial3.println(rpm_left, 2);
+    Serial3.print("R:");
+    Serial3.println(rpm_right, 2);
     Serial3.print("Set speed:");
     Serial3.println(set_car_speed);
-    Serial3.print("L:");
-    Serial3.println(speedL);
-    Serial3.print("R:");
-    Serial3.println(speedR);
 }
 
 /*
@@ -120,11 +96,6 @@ static int str2int(void)
         {
             buffer[counter++] = tempChar;
         }
-        else
-        {
-            Serial3.println("Formate error!");
-        }
-
         while(!Serial3.available())
             ;
     }
