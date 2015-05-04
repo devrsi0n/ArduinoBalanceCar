@@ -8,6 +8,10 @@
 #define LEVEL_ANGLE_MIN     -5
 #define LEVEL_ANGLE_MAX      5
 
+// PWM left & right value to slow down motors
+volatile int left_value  = 0;
+volatile int right_value = 0;
+
 // global args
 extern volatile char btCommand;
 extern volatile float board_angle;

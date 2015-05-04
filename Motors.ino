@@ -113,7 +113,7 @@ void encoderRight(void)
 /*
 * caculate speed PID output
 */
-void speedCtrl(void)
+void speedCtrlPID(void)
 {
     static int time_counter = 0;
     if(++time_counter == SPEED_CTRL_PERIOD)
@@ -141,7 +141,7 @@ void speedCtrl(void)
 
         set_car_speed = constrain(set_car_speed, SPEED_LIMIT_MIN, SPEED_LIMIT_MAX);
         float average_speed = (rpm_left + rpm_right) / 2.0;
-        speed_ctrl_total_output = computeSpeedPID(set_car_speed, average_speed);
+        speed_ctrl_total_output = speedPIDcompute(set_car_speed, average_speed);
     }
 }
 
@@ -168,7 +168,7 @@ void speedCtrlOutput(void)
 /*
 * caculate direction output to 10 parts
 */
-void directionCtrl(void)
+void directionCtrlPID(void)
 {
     static int time_counter = 0;
 
@@ -286,24 +286,6 @@ void setPWMFrequency(byte mode)
         // set PWM frequency for pin 9, 10
         TCCR2B = TCCR2B & 0b11111000 | mode;
     }
-}
-
-float computeSpeedPID(float set_speed, float average_speed)
-{
-    static float intergral = 0;
-    static float last_delta_speed = 0;
-    float result = 0;
-    float delta_speed = (set_speed - average_speed);
-    float fP = delta_speed * CarArgs.speedCtrlP;
-    float fI = delta_speed * CarArgs.speedCtrlI;
-    float fD = (delta_speed - last_delta_speed) * CarArgs.speedCtrlD;
-    last_delta_speed = delta_speed;
-
-    intergral += fI;
-    intergral = constrain(intergral, INTERGRAL_MIN, INTERGRAL_MAX);
-    result = fP + intergral + fD;
-
-    return result;
 }
 
 
