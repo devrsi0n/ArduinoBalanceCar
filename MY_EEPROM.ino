@@ -17,7 +17,10 @@ int readIntFromEEPROM(int address)
     return value;
 }
 
-void clearEEPROM(void)
+/*
+ * clear all of the EEPROM data if need
+ */
+void initEEPROM(void)
 {
     int i;
     for(i = 0; i < 4096; i++)
