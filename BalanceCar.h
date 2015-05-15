@@ -4,10 +4,10 @@
 /***All of the car's states defined here***/
 typedef enum state{
     standBalance,
-    bluetoothCtrl,
-    emergencyBrake,
-    lockIn,
-    argsAdjust,
+    parameterAdjust,
+    advanceCtrl,
+    directionCtrl,
+    lockIn
     // ...more states add here
 } States;
 
@@ -34,16 +34,17 @@ struct CarArguments{
 // #define _PRINT_ARGS
 // #define _PRINT_SPEED
 
-
+// pin for controller's status
 #define RUNNING_LIGHT_PIN 13
 
+// PWM limit
 #define PWM_MIN     -252
 #define PWM_MAX      252
 
 // static args value
-#define ANGLE_P     13.0
+#define ANGLE_P     9.0
 #define ANGLE_I     0
-#define ANGLE_D     0.02
+#define ANGLE_D     0 // 0.02
 
 #define SPEED_P     0
 #define SPEED_I     0
@@ -55,12 +56,6 @@ struct CarArguments{
 MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
-
-// set up angle PID args
-double angle_input = 0, angle_output = 0;
-double angle_setpoint = 0.326865; //-1.777692; //-0.089055;
-double kp, ki, kd;
-PID angle_pid(&angle_input, &angle_output, &angle_setpoint, kp, ki, kd, DIRECT);
 
 // bluetooth command for argments adjust and control
 volatile char btCommand = 0;

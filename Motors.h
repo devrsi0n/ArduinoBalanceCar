@@ -15,14 +15,12 @@
 #define LEFT_ENCODER_PIN    19
 #define RIGHT_ENCODER_PIN   18
 // define derection pins to measure car's direction
-#define LEFT_DIRECTION_PIN  16
-#define RIGHT_DIRECTION_PIN 17
+#define LEFT_DIRECTION_PIN  17
+#define RIGHT_DIRECTION_PIN 16
 
 // limit speed & intergral max value
 #define SPEED_LIMIT_MIN     -60
 #define SPEED_LIMIT_MAX      60
-#define INTERGRAL_MIN       -25
-#define INTERGRAL_MAX        25
 
 // PWM frequency selector
 #define HZ_31250        1
@@ -32,7 +30,7 @@
 #define HZ_30           5
 
 // control period
-#define SPEED_CTRL_PERIOD        10
+#define SPEED_CTRL_PERIOD        10// count the times of loop;the time of a loop is 10ms,but the time of samplespeed is 100ms
 #define DIRECTION_CTRL_PERIOD    10
 #define SAMPLE_SPEED_PERIOD      10
 

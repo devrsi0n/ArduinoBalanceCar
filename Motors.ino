@@ -39,7 +39,7 @@ void sampleSpeed(void)
     static int time_counter = 0;
     static unsigned long past_micros = 0;
 
-    if(++time_counter == SAMPLE_SPEED_PERIOD)
+    if(++time_counter == SAMPLE_SPEED_PERIOD)//calculate the pulses in 10 loop
     {
         time_counter = 0;
 
@@ -50,7 +50,7 @@ void sampleSpeed(void)
         detachInterrupt(4); // close external interrupt #4
         detachInterrupt(5); // close external interrupt #5
 
-        rpm_left  = (float)count_left  * 60.0 * (1000000.0 / dt) / (400.0 * 32.0);
+        rpm_left  = (float)count_left  * 60.0 * (1000000.0 / dt) / (400.0 * 32.0);//the output speed represent encoder reduction gear ratio rotate speed(r/m)
         rpm_right = (float)count_right * 60.0 * (1000000.0 / dt) / (400.0 * 32.0);
         count_left  = 0;
         count_right = 0;
@@ -74,16 +74,18 @@ void sampleSpeed(void)
 void encoderLeft(void)
 {
     // if the motor is forewarding, it's unnecessary to read direction pin.
-    if (rpm_left > 10.0)
-    {
-        count_left++;
-        return;
-    }
-    if (rpm_left < -10.0)
-    {
-        count_left--;
-        return;
-    }
+
+    // if (rpm_left > 10.0)
+    // {
+    //     count_left++;
+    //     return;
+    // }
+    // if (rpm_left < -10.0)
+    // {
+    //     count_left--;
+    //     return;
+    // }
+
     // the motor is forewarding if B line is high level voltage when a falling extern interruption is coming,
     // otherwise the motor is rollbacking.
     if (digitalRead(LEFT_DIRECTION_PIN) == HIGH)
@@ -93,18 +95,18 @@ void encoderLeft(void)
 }
 void encoderRight(void)
 {
-    if (rpm_right > 10.0)
-    {
-        count_right++;
-        return;
-    }
-    if (rpm_left < -10.0)
-    {
-        count_right--;
-        return;
-    }
+    // if (rpm_right > 10.0)
+    // {
+    //     count_right++;
+    //     return;
+    // }
+    // if (rpm_left < -10.0)
+    // {
+    //     count_right--;
+    //     return;
+    // }
 
-    if (digitalRead(RIGHT_DIRECTION_PIN) == HIGH)
+    if (digitalRead(RIGHT_DIRECTION_PIN) == HIGH)//you can compand with the A B wire on the encoder,and you can know the direction
         count_right++;
     else
         count_right--;
@@ -113,62 +115,67 @@ void encoderRight(void)
 /*
 * caculate speed PID output
 */
-void speedCtrl(void)
+void speedCtrlPID(void)
 {
     static int time_counter = 0;
     if(++time_counter == SPEED_CTRL_PERIOD)
     {
         time_counter = 0;
-        if(next_state == bluetoothCtrl && btCommand == 'w')
+        if(next_state == standBalance && btCommand == 'w')
         {
             Serial3.println(btCommand); // let operator knows whether the bluetooth command write into controller board.
-            set_car_speed += 20;
-            sendCarSpeed();
+            set_car_speed += 5;
+            //sendCarSpeed();
             btCommand = 0;
         }
-        else if(next_state == bluetoothCtrl && btCommand == 's')
+        else if(next_state == standBalance && btCommand == 's')
         {
             Serial3.println(btCommand);
-            set_car_speed -= 20;
-            sendCarSpeed();
+            set_car_speed -= 5;
+            //sendCarSpeed();//send the set speed and the ture speed value now
             btCommand = 0;
         }
 
-        if(next_state == standBalance)
-        {
-            set_car_speed = 0;
-        }
+        // if(next_state == standBalance)
+        // {
+        //     set_car_speed = 0;
+        // }
+
+        sendCarSpeed();//sent the speed of car on serial3
 
         set_car_speed = constrain(set_car_speed, SPEED_LIMIT_MIN, SPEED_LIMIT_MAX);
         float average_speed = (rpm_left + rpm_right) / 2.0;
-        speed_ctrl_total_output = computeSpeedPID(set_car_speed, average_speed);
+        speed_ctrl_total_output = speedPIDcompute(set_car_speed, average_speed);//You can get the value after speed PID adjust,
     }
 }
 
 /*
 * speed PID output divide equally
 */
-void speedCtrlOutput(void)
+void speedCtrlOutput(void)//100ms control
 {
     static int counter = 0;
     static float speed_output_old = 0;
     float delta_speed_output = 0;
-    float speed_output_new = speed_ctrl_total_output;
+    float speed_output_new = speed_ctrl_total_output;//速度检测为100ms检测一次，但是与此速度控制仍然为10ms一次，所以在10个速度控制循环内，这里的速度值都不会更新；
 
-    delta_speed_output =  speed_output_new - speed_output_old;
+    delta_speed_output = speed_output_new - speed_output_old;
     ++counter;
     speed_ctrl_output = counter * delta_speed_output / SPEED_CTRL_PERIOD + speed_output_old;
+
+    // Serial.println(speed_ctrl_output);
+
     if(counter == SPEED_CTRL_PERIOD)
     {
         counter = 0;
-        speed_output_old = speed_output_new;
+        speed_output_old = speed_output_new;//updata the speed value
     }
 }
 
 /*
 * caculate direction output to 10 parts
 */
-void directionCtrl(void)
+void directionCtrlPID(void)
 {
     static int time_counter = 0;
 
@@ -176,13 +183,13 @@ void directionCtrl(void)
     {
         time_counter = 0;
         direction_ctrl_total_output = 0;
-        if(next_state == bluetoothCtrl && btCommand == 'a')
+        if(next_state == directionCtrl && btCommand == 'a')
         {
             Serial3.println(btCommand);
             direction_ctrl_total_output = 30;
             btCommand = 0;
         }
-        else if(next_state == bluetoothCtrl && btCommand == 'd')
+        else if(next_state == directionCtrl && btCommand == 'd')
         {
             Serial3.println(btCommand);
             direction_ctrl_total_output = -30;
@@ -212,8 +219,11 @@ void directionCtrlOutput(void)
 
 void motorsOutput(void)
 {
-    float left_value  = angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
-    float right_value = angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
+    // float left_value  = angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+    // float right_value = angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
+    float left_value  = angle_ctrl_output - speed_ctrl_output;
+    float right_value = angle_ctrl_output - speed_ctrl_output;
+
 
     motorsOutputAdjust(left_value, right_value);
 }
@@ -286,24 +296,6 @@ void setPWMFrequency(byte mode)
         // set PWM frequency for pin 9, 10
         TCCR2B = TCCR2B & 0b11111000 | mode;
     }
-}
-
-float computeSpeedPID(float set_speed, float average_speed)
-{
-    static float intergral = 0;
-    static float last_delta_speed = 0;
-    float result = 0;
-    float delta_speed = (set_speed - average_speed);
-    float fP = delta_speed * CarArgs.speedCtrlP;
-    float fI = delta_speed * CarArgs.speedCtrlI;
-    float fD = (delta_speed - last_delta_speed) * CarArgs.speedCtrlD;
-    last_delta_speed = delta_speed;
-
-    intergral += fI;
-    intergral = constrain(intergral, INTERGRAL_MIN, INTERGRAL_MAX);
-    result = fP + intergral + fD;
-
-    return result;
 }
 
 

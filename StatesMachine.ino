@@ -9,57 +9,65 @@
 
 void statesMachine(void)
 {
-    if(Serial3.available())
-    {
-        btCommand = Serial3.read();
-        if(btCommand == 'r') // 'r' ---> bluetooth control "ready"
-        {
-            Serial3.println(btCommand); // let us know whether the bluetooth command write into controller.
-            bluetoothCtrlReady();
-            btCommand = 0;
-        }
-        else if(btCommand == 'l') // 'l' ---> "lock" the car
-        {
-            Serial3.println(btCommand);
-            lockCar();
-            btCommand = 0;
-        }
-        else if(next_state == lockIn && btCommand == 'u') // 'u' ---> 'unlock' the car
+    // if(Serial3.available())
+    // {
+    //     btCommand = Serial3.read();
+
+
+        // if(btCommand == 'j') // 
+        // {
+        //     Serial3.println(btCommand); // let us know whether the bluetooth command write into controller.
+        //     parameterAdjustReady();
+        //     btCommand = 0;
+        // }
+        // else 
+        if(btCommand == 'a') // 'a' --->  'advance':go forward
         {
             Serial3.println(btCommand);
-            unlockCar();
+            goForward();
             btCommand = 0;
         }
-    }
-    if(next_state == emergencyBrake && board_angle >= LEVEL_ANGLE_MIN && board_angle <= LEVEL_ANGLE_MAX)
+        else if(btCommand == 'd') // 'd' ---> "direction": control the direction of the car
+        {
+            Serial3.println(btCommand);
+            turningCircle();
+            btCommand = 0;
+        }
+
+    //}
+
+    if(next_state == lockIn && board_angle >= LEVEL_ANGLE_MIN && board_angle <= LEVEL_ANGLE_MAX)
     {
         static int counter = 0;
         if(board_angle > LEVEL_ANGLE_MAX || board_angle < LEVEL_ANGLE_MIN)
             counter = 0;
         if(counter++ == 1000) // hold level and wait for 2 second(2ms x 1000).
         {
-            boardLevel();
+            boardLevel();//state change from lockIn to standBalance
             counter = 0;
         }
     }
     if(board_angle <= EMERGENCY_BRAKE_ANGLE_MIN || board_angle >= EMERGENCY_BRAKE_ANGLE_MAX)
     {
-        angleOutOfRange();
+        angleOutOfRange();//while the angle is out of range
     }
 
     switch(next_state)
     {
     case standBalance:
-        standBalanceState();
+        standBalanceState();//a state of the car to stand
         break;
-    case bluetoothCtrl:
-        bluetoothCtrlState();
+    case parameterAdjust:
+        parameterAdjustState();//adjust the parameter about PID
         break;
-    case emergencyBrake:
-        emergencyBrakeState();
+    case advanceCtrl:
+        advanceState();//a state of the car to go forward
+        break;
+    case directionCtrl:
+        directionCtrlState();//the car to turning circle
         break;
     case lockIn:
-        lockInState();
+        lockInState();//lock the car,it means the output of motor is 0
         break;
     default:
         Serial3.println("States seletor error!");
@@ -74,35 +82,61 @@ void statesMachine(void)
 void boardLevel(void)
 {
     curr_state = next_state;
-    if(curr_state == emergencyBrake)
+    if(curr_state == lockIn)
         next_state = standBalance;
 }
 
-void bluetoothCtrlReady(void)
+void parameterAdjustReady(void)
 {
     curr_state = next_state;
     if(curr_state == standBalance)
-        next_state = bluetoothCtrl;
+        next_state = parameterAdjust;
 }
 
 /*
 * if angle beyond (-15, 15) degree, swtich state to emergencyBrake state.
 */
-void angleOutOfRange(void)
+void angleOutOfRange(void)//while the angle is out of range,turn to lockIn state
 {
     curr_state = next_state;
-    if(curr_state == standBalance || curr_state == bluetoothCtrl)
-        next_state = emergencyBrake;
+    if(curr_state == standBalance || curr_state == advanceCtrl || curr_state == directionCtrl)
+    {
+        next_state = lockIn;
+
+        // args to slow down motors
+        left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+        right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
+    }
 }
 
+void goForward(void)
+{
+	curr_state = next_state;
+	if(curr_state == standBalance)
+		next_state = advanceCtrl;
+}
+
+void turningCircle(void)
+{
+	curr_state = next_state;
+	if(curr_state == standBalance)
+		next_state = directionCtrl;
+}
 /*
 * if bluetooth send char 'l', swtich state to lockIn state.
 */
 void lockCar(void)
 {
     curr_state = next_state;
-    if(curr_state == standBalance || curr_state == bluetoothCtrl)
+    if(curr_state == standBalance || curr_state == advanceCtrl || curr_state == directionCtrl)
+    {
         next_state = lockIn;
+
+        // args to slow down motors
+        left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+        right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
+    }
+
 }
 
 /*
@@ -112,17 +146,17 @@ void unlockCar(void)
 {
     curr_state = next_state;
     if(curr_state == lockIn)
-        next_state = emergencyBrake;
+        next_state = standBalance;
 }
 
 /*
 * if bluetooth send char 't', swtich state to argsAdjust state.
 */
-void argumentsAdjust(void)
+void stableAdjust(void)//this is a state between all states,the state is standBalanceState,every state turn to another must via it
 {
     curr_state = next_state;
-    if(curr_state == standBalance || curr_state == emergencyBrake || curr_state == lockIn)
-        next_state = argsAdjust;
+    if(curr_state == parameterAdjust || curr_state == advanceCtrl || curr_state == lockIn || curr_state == directionCtrl)
+        next_state = standBalance;
 }
 
 void standBalanceState(void)
@@ -136,31 +170,38 @@ void standBalanceState(void)
         readSampleMPU6050();
         break;
     case 1:
-        getOriginalAngleGyro();
-        angleFilter();
-        angleCtrlPID();
+        getOriginalAngleGyro();//get the original data of angle and gyroscope
+        angleFilter();//combine the data of angle and gyroscope to get a ture angle
+        angleCtrlPID();//use the ture angle calculate the output of PWM value
         break;
     case 2:
-        sampleSpeed();
-        speedCtrl();
+        sampleSpeed();//calculate the sum of pulses in 10 loop
+        speedCtrlPID();
         speedCtrlOutput();
         break;
     case 3:
-        directionCtrl();
+        directionCtrlPID();
         directionCtrlOutput();
         break;
     case 4:
         motorsOutput();
-        if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
+        if(btCommand == 'l') // lock
         {
             Serial3.println(btCommand);
-            sendArgsData();
+            btCommand = 0;
+            lockInState();//print the pid of angle and speed on the phone
+            
+        }
+        else if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth(on standBalance state)
+        {
+            Serial3.println(btCommand);
+            sendArgsData();//print the pid of angle and speed on the phone
             btCommand = 0;
         }
         else if(btCommand == 'g')
         {
             Serial3.println(btCommand);
-            Serial3.println(board_angle);
+            Serial3.println(board_angle);//print the angle of board on the phone
             btCommand = 0;
         }
         // if(++counter == 20)
@@ -178,7 +219,71 @@ void standBalanceState(void)
         i = 0;
 }
 
-void bluetoothCtrlState(void)
+void advanceState(void)
+{
+    static int j = 0;
+
+    switch(j)
+    {
+    case 0:
+        readSampleMPU6050();
+        break;
+    case 1:
+        getOriginalAngleGyro();
+        angleFilter();
+        angleCtrlPID();
+        break;
+    case 2:
+        sampleSpeed();//print speed here
+        speedCtrlPID();
+        speedCtrlOutput();
+        break;
+    case 3:
+        directionCtrlPID();
+        directionCtrlOutput();
+        break;
+    case 4:
+        motorsOutput();
+        if(btCommand == 'l') // mean  the car to change it's state to lockIn from go forward
+        {
+            Serial3.println(btCommand);
+            lockInState();
+            btCommand = 0;
+        }
+        else if(btCommand == 'b') // mean  the car to change it's state to standBalance from go forward
+        {
+            Serial3.println(btCommand);
+            stableAdjust();
+            btCommand = 0;
+        }
+        else if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
+        {
+            Serial3.println(btCommand);
+            sendArgsData();
+            btCommand = 0;
+        }
+        else if(btCommand == 'g')
+        {
+            Serial3.println(btCommand);
+            Serial3.println(board_angle);
+            btCommand = 0;
+        }
+        else if(btCommand == 'v')
+        {
+            Serial3.println(btCommand);
+            sendCarSpeed();
+            btCommand = 0;
+        }
+        break;
+    default:
+        Serial3.println("bluetoothCtrlState error!");
+        while(1); //stop here
+    }
+    if(++j >= 5)
+        j = 0;
+}
+
+void directionCtrlState(void)
 {
     static int j = 0;
 
@@ -194,16 +299,28 @@ void bluetoothCtrlState(void)
         break;
     case 2:
         sampleSpeed();
-        speedCtrl();
+        speedCtrlPID();
         speedCtrlOutput();
         break;
     case 3:
-        directionCtrl();
+        directionCtrlPID();
         directionCtrlOutput();
         break;
     case 4:
         motorsOutput();
-        if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
+        if(btCommand == 'l') // mean  the car to change it's state to lockIn from turning circle
+        {
+            Serial3.println(btCommand);
+            lockInState();
+            btCommand = 0;
+        }
+        else if(btCommand == 'b') // mean  the car to change it's state to standBalance from turning circle
+        {
+            Serial3.println(btCommand);
+            stableAdjust();
+            btCommand = 0;
+        }
+        else if(btCommand == 'e') // mean send pid arguments from arduino by bluetooth
         {
             Serial3.println(btCommand);
             sendArgsData();
@@ -215,7 +332,7 @@ void bluetoothCtrlState(void)
             Serial3.println(board_angle);
             btCommand = 0;
         }
-        else if(btCommand == 'o')
+        else if(btCommand == 'v')
         {
             Serial3.println(btCommand);
             sendCarSpeed();
@@ -230,63 +347,10 @@ void bluetoothCtrlState(void)
         j = 0;
 }
 
-void emergencyBrakeState(void)
-{
-    static int k = 0;
-    static int counter = 0;
-    static int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
-    static int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
-
-    switch(k)
-    {
-    case 0:
-        readSampleMPU6050();
-        break;
-    case 1:
-        getOriginalAngleGyro();
-        break;
-    case 2:
-        angleFilter();
-        break;
-    case 3:
-        // slow down motors gentle.
-        if(left_value > 0)
-            --left_value;
-        else if(left_value < 0)
-            ++left_value;
-        if(right_value > 0)
-            --right_value;
-        else if(right_value < 0)
-            ++right_value;
-        motorsOutputAdjust(left_value, right_value);
-        break;
-    case 4:
-        if(btCommand == 'e')
-        {
-            Serial3.println(btCommand);
-            btCommand = 0;
-            sendArgsData();
-        }
-        if(++counter == 50) // --> 2 x 5 x 50 = 500ms
-        {
-            counter = 0;
-            Serial3.println(board_angle); // send board's angle per 0.5 second
-        }
-        break;
-    default:
-        Serial3.println("emergencyBrakeState error");
-        while(1);
-    }
-    if(++k >= 5)
-        k = 0;
-}
-
 void lockInState(void)
 {
     static int l = 0;
-    static int counter = 0;
-    static int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
-    static int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
+    next_state = lockIn;
 
     switch(l)
     {
@@ -300,7 +364,7 @@ void lockInState(void)
         angleFilter();
         break;
     case 3:
-        // slow down motors gentle.
+        // slow down motors gently.
         if(left_value > 0)
             --left_value;
         else if(left_value < 0)
@@ -327,12 +391,12 @@ void lockInState(void)
         l = 0;
 }
 
-void argsAdjustState(void)
+void parameterAdjustState(void)
 {
     int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
     int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
-    // slow down motors gentle.
+    // slow down motors gently.
     while(left_value != 0 || right_value != 0)
     {
         if(left_value > 0)
@@ -348,39 +412,49 @@ void argsAdjustState(void)
     }
 
     while(!Serial3.available())
-        ;
-    btCommand = Serial3.read();
-    while((btCommand != 'p') && (btCommand != 'i') && (btCommand != 'v')) // 'p' --> save angle PID args, 'i' --> save speed PID args, 'v' --> save motor dead value
-    {
-        Serial3.print(btCommand);
-        Serial3.println(" is NOT \'p\', \'i\' or \'v\'.");
-        btCommand = Serial3.read();
-        while(!Serial3.available())
-            ;
-    }
-    Serial3.println(btCommand);
-    argsAdjustSaveData();
-    getAnglePID();
-    getSpeedPID();
-    getMotorDeadVal();
-    sendArgsData();
+        ;//waiting for next command
 
-    while(!Serial3.available())
-        ;
-    while((btCommand = Serial3.read()) != 'f') // 'f' --> confirm
+    while((btCommand=Serial3.read()) != 'f') // 'f' --> confirm;make sure the value of pid you set is right
     {
-        Serial3.print(btCommand);
-        Serial3.println(" is NOT \'f\'.");
+        while((btCommand != 'p') && (btCommand != 'i') && (btCommand != 'm') && (btCommand != 'f')) // 'p' --> save angle PID args, 'i' --> save speed PID args, 'v' --> save motor dead value
+        {
+            Serial3.println(btCommand);
+            Serial3.println(" is NOT \'p\' , \'i\' or \'m\'.");
+            
+            while(!Serial3.available())
+                ;
+            btCommand = Serial3.read();//because the command is wrong,so you should read serial prot
+        }
+
+        // if(btCommand == 't')
+        // {
+        //     Serial3.println("give it up,please setting the value of pid again");
+        //     btCommand = 0;
+        //     parameterAdjustState();
+            
+        // }
+        
+        Serial3.println(btCommand);
+        argsAdjustSaveData();
+        getAnglePID();
+        getSpeedPID();
+        getMotorDeadVal();
+        sendArgsData();//make sure the parameter is right
         while(!Serial3.available())
-            ;
+                ;
+        //btCommand = Serial3.read();//since define 'btCommand = 0' before,so the value of btCommand is 0 before
+                
     }
-    Serial3.println(btCommand);
+
+    Serial3.println(btCommand);    
     btCommand = 0;
-    next_state = emergencyBrake;
+    next_state = lockIn;
 
 #ifdef _PRINT_ARGS
     Serial.print("angleP:");
     Serial.println(CarArgs.angleCtrlP);
+    Serial.print("angleI:");
+    Serial.println(CarArgs.angleCtrlI);
     Serial.print("angleD:");
     Serial.println(CarArgs.angleCtrlD);
     Serial.print("speedP:");

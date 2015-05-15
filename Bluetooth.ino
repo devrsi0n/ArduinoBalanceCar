@@ -8,6 +8,7 @@ void argsAdjustSaveData(void)
     if(btCommand == 'p') // adjust angle args
     {
         btCommand = 0;
+        Serial3.println("Now you can input the pid of angle:");
 
         int angleP = str2int();
         writeIntToEEPROM(EEPROM_ANGLE_P_ADDR, angleP);
@@ -25,6 +26,7 @@ void argsAdjustSaveData(void)
     else if(btCommand == 'i') // adjust speed args
     {
         btCommand = 0;
+        Serial3.println("Now you can input the pid of speed:");
 
         int speedP = str2int();
         writeIntToEEPROM(EEPROM_SPEED_P_ADDR, speedP);
@@ -39,7 +41,7 @@ void argsAdjustSaveData(void)
 
         Serial3.println("success!");
     }
-    else if(btCommand  == 'v') // adjust motor dead value
+    else if(btCommand  == 'm') // adjust motor dead value
     {
         btCommand = 0;
 
@@ -54,17 +56,18 @@ void argsAdjustSaveData(void)
 
 void sendArgsData(void)
 {
-    int angleP = (int)(CarArgs.angleCtrlP * 100);
-    int angleI = (int)(CarArgs.angleCtrlI * 100);
-    int angleD = (int)(CarArgs.angleCtrlD * 100);
+    float angleP = CarArgs.angleCtrlP;//the real value you set
+    float angleI = CarArgs.angleCtrlI;
+    float angleD = CarArgs.angleCtrlD;
 
-    int speedP = (int)(CarArgs.speedCtrlP * 100);
-    int speedI = (int)(CarArgs.speedCtrlI * 100);
-    int speedD = (int)(CarArgs.speedCtrlD * 100);
+    float speedP = CarArgs.speedCtrlP;
+    float speedI = CarArgs.speedCtrlI;
+    float speedD = CarArgs.speedCtrlD;
 
-    int deadVal= (int)(CarArgs.motorDeadVal * 100);
+    float deadVal= CarArgs.motorDeadVal;
 
     // print angle PID args
+    Serial3.println("The real value you input:");
     Serial3.print("angle\nP:");
     Serial3.print(angleP);
     Serial3.print("\tI:");
@@ -87,8 +90,8 @@ void sendArgsData(void)
 
 void sendCarSpeed(void)
 {
-    int speedL = (int)rpm_left;
-    int speedR = (int)rpm_right;
+    float speedL = rpm_left;
+    float speedR = rpm_right;
 
     Serial3.print("Set speed:");
     Serial3.println(set_car_speed);
@@ -122,7 +125,7 @@ static int str2int(void)
         }
         else
         {
-            Serial3.println("Formate error!");
+            Serial3.println(" is not a digit number!");
         }
 
         while(!Serial3.available())
