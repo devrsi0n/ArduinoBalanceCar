@@ -92,13 +92,7 @@ void angleOutOfRange(void)
 {
     curr_state = next_state;
     if(curr_state == standBalance || curr_state == bluetoothCtrl)
-    {
         next_state = emergencyBrake;
-
-        // args to slow down motors
-        left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
-        right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
-    }
 }
 
 /*
@@ -108,14 +102,7 @@ void lockCar(void)
 {
     curr_state = next_state;
     if(curr_state == standBalance || curr_state == bluetoothCtrl)
-    {
         next_state = lockIn;
-
-        // args to slow down motors
-        left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
-        right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
-    }
-
 }
 
 /*
@@ -155,11 +142,11 @@ void standBalanceState(void)
         break;
     case 2:
         sampleSpeed();
-        speedCtrlPID();
+        speedCtrl();
         speedCtrlOutput();
         break;
     case 3:
-        directionCtrlPID();
+        directionCtrl();
         directionCtrlOutput();
         break;
     case 4:
@@ -207,11 +194,11 @@ void bluetoothCtrlState(void)
         break;
     case 2:
         sampleSpeed();
-        speedCtrlPID();
+        speedCtrl();
         speedCtrlOutput();
         break;
     case 3:
-        directionCtrlPID();
+        directionCtrl();
         directionCtrlOutput();
         break;
     case 4:
@@ -247,6 +234,8 @@ void emergencyBrakeState(void)
 {
     static int k = 0;
     static int counter = 0;
+    static int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+    static int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
     switch(k)
     {
@@ -260,7 +249,7 @@ void emergencyBrakeState(void)
         angleFilter();
         break;
     case 3:
-        // slow down motors gently.
+        // slow down motors gentle.
         if(left_value > 0)
             --left_value;
         else if(left_value < 0)
@@ -295,6 +284,9 @@ void emergencyBrakeState(void)
 void lockInState(void)
 {
     static int l = 0;
+    static int counter = 0;
+    static int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
+    static int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
     switch(l)
     {
@@ -308,7 +300,7 @@ void lockInState(void)
         angleFilter();
         break;
     case 3:
-        // slow down motors gently.
+        // slow down motors gentle.
         if(left_value > 0)
             --left_value;
         else if(left_value < 0)
@@ -340,7 +332,7 @@ void argsAdjustState(void)
     int left_value  = (int)angle_ctrl_output - speed_ctrl_output - direction_ctrl_output;
     int right_value = (int)angle_ctrl_output - speed_ctrl_output + direction_ctrl_output;
 
-    // slow down motors gently.
+    // slow down motors gentle.
     while(left_value != 0 || right_value != 0)
     {
         if(left_value > 0)

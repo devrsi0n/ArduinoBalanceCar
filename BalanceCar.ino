@@ -2,18 +2,18 @@
 #include <TimerOne.h>
 #include <Wire.h>
 #include <I2Cdev.h>
+#include <PID_v1.h>
 #include "BalanceCar.h"
 #include "MY_EEPROM.h"
 #include "StatesMachine.h"
 #include "Angle.h"
 #include "Motors.h"
 #include "bluetooth.h"
-#include "PID.h"
 
 
 void setup(void)
 {
-    // initEEPROM(); // clear all of EEPROM data, comment it if need
+    // initEEPROM(); // initialize EEPROM if need
     initMotors();
     initEncoders();
     pinMode(RUNNING_LIGHT_PIN, OUTPUT); // set a light pin represent controller is running.
@@ -23,21 +23,22 @@ void setup(void)
     Serial.begin(115200);
     Serial3.begin(115200); // bluetooth use serial port 3
 
-    getAnglePID();
-    getSpeedPID();
-    getMotorDeadVal();
-
     accelgyro.initialize();
+    initAnglePID();
 
     Timer1.initialize(2000); // set timer interruption time to 2ms(1us * 2000).
     Timer1.attachInterrupt(timerIsr); // start timer
+
+    getAnglePID();
+    getSpeedPID();
+    getMotorDeadVal();
 }
 
 void loop(void)
 {
     runningLight();
 
-    printAngle();    // uncomment it to porint car's angle
+    // printAngle();    // uncomment to porint car's angle
 
     if(Serial3.available() && btCommand == 't') // 't' ---> stop interrupts and enter the arguments adjust state
     {
@@ -48,19 +49,19 @@ void loop(void)
         Serial3.println(btCommand);
         btCommand = 0;
 
-        argumentsAdjust(); // switch to argsAdjust state
+        argumentsAdjust(); // change to argsAdjust state
         argsAdjustState();
 
         Timer1.initialize(2000); // set timer to 2ms(1000 x 1us).
         Timer1.attachInterrupt(timerIsr);
-        attachInterrupt(4, encoderLeft,  FALLING); // reopen external interrupt #4
+        attachInterrupt(4, encoderLeft,  FALLING);
         attachInterrupt(5, encoderRight, FALLING);
     }
 }
 
 void timerIsr(void)
 {
-    sei(); // to open global interrupt bit.(default is closed)
+    sei(); // to open global interrupt bit.(default close)
 
     statesMachine(); // main logic codes write here.
 }
@@ -98,16 +99,13 @@ void printAngle(void)
         counter = 0;
         // Serial.print(original_angle);
         // Serial.print(",");
-        // Serial.print(klm_angle);
-        // Serial.print(",");
+        Serial.print(klm_angle);
+        Serial.print(",");
         Serial.println(board_angle);
 
         // Serial.print(original_gyro);
         // Serial.print(",");
         // Serial.println(board_gyro);
-
-        // Serial3.println(angle_ctrl_output);
-        // Serial.println(CarArgs.angleCtrlI);
     }
 }
 
@@ -121,11 +119,11 @@ void getAnglePID(void)
     if(saved == ANGLE_PID_SAVED)                            // check if PID has been saved to EEPROM
     {
         int nP = readIntFromEEPROM(EEPROM_ANGLE_P_ADDR);  // read P from EEPROM
-        CarArgs.angleCtrlP = nP / 1000.0;
+        CarArgs.angleCtrlP = nP / 100.0;
         int nI = readIntFromEEPROM(EEPROM_ANGLE_I_ADDR);  // read I from EEPROM
-        CarArgs.angleCtrlI = nI / 1000.0;
+        CarArgs.angleCtrlI = nI / 100.0;
         int nD = readIntFromEEPROM(EEPROM_ANGLE_D_ADDR);  // read D from EEPROM
-        CarArgs.angleCtrlD = nD / 1000.0;
+        CarArgs.angleCtrlD = nD / 100.0;
     }
     else
     {
@@ -145,13 +143,13 @@ void getSpeedPID(void)
     if(saved == SPEED_PID_SAVED)
     {
         int nP = readIntFromEEPROM(EEPROM_SPEED_P_ADDR);
-        CarArgs.speedCtrlP = nP / 1000.0;
+        CarArgs.speedCtrlP = nP / 100.0;
 
         int nI = readIntFromEEPROM(EEPROM_SPEED_I_ADDR);
-        CarArgs.speedCtrlI = nI / 1000.0;
+        CarArgs.speedCtrlI = nI / 100.0;
 
         int nD = readIntFromEEPROM(EEPROM_SPEED_D_ADDR);
-        CarArgs.speedCtrlD = nD / 1000.0;
+        CarArgs.speedCtrlD = nD / 100.0;
     }
     else
     {
@@ -171,7 +169,7 @@ void getMotorDeadVal(void)
     if (saved == MOTOR_DEAD_VAL_SAVED)
     {
         int deadVal = readIntFromEEPROM(EEPROM_MOTOR_DEAD_VAL_ADDR);
-        CarArgs.motorDeadVal = deadVal / 1000.0;
+        CarArgs.motorDeadVal = deadVal / 100.0;
     }
     else
         CarArgs.motorDeadVal = MOTOR_OUT_DEAD_VAL;

@@ -21,6 +21,8 @@
 // limit speed & intergral max value
 #define SPEED_LIMIT_MIN     -60
 #define SPEED_LIMIT_MAX      60
+#define INTERGRAL_MIN       -25
+#define INTERGRAL_MAX        25
 
 // PWM frequency selector
 #define HZ_31250        1

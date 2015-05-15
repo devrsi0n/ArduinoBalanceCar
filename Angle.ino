@@ -1,5 +1,13 @@
 #include <Angle.h>
 
+void initAnglePID(void)
+{
+    angle_pid.SetOutputLimits(PWM_MIN, PWM_MAX);
+    angle_pid.SetSampleTime(10); // 2ms X 5 = 10ms
+    angle_pid.SetMode(AUTOMATIC);
+    angle_pid.SetTunings(CarArgs.angleCtrlP, CarArgs.angleCtrlI, CarArgs.angleCtrlD);
+}
+
 void readSampleMPU6050(void)
 {
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -29,17 +37,18 @@ void angleFilter(void)
     float delta_time = (now - pre_time) / 1000000.0;
     pre_time = now;
 
-    // board_gyro = complementaryFilter(original_gyro, delta_time);
-    klm_angle = kalmanFilter(original_angle, original_gyro, delta_time);
-    // board_angle = complementary2Filter(klm_angle, original_gyro, delta_time);
-    board_angle = klm_angle;
+    board_gyro = complementaryFilter(original_gyro, delta_time);
+    klm_angle = kalmanFilter(original_angle, board_gyro, delta_time);
+    board_angle = complementary2Filter(klm_angle, board_gyro, delta_time);
 
     board_angle = constrain(board_angle, MIN_ANGLE, MAX_ANGLE); // board angle limit
 }
 
 void angleCtrlPID(void)
 {
-    angle_ctrl_output = anglePIDCompute(board_angle);
+    angle_input = board_angle;
+    angle_pid.Compute();
+    angle_ctrl_output = angle_output;
 }
 
 /*
@@ -47,9 +56,9 @@ void angleCtrlPID(void)
 */
 float kalmanFilter(float angle, float gyro, float delta_time)
 {
-#define Q_ANGLE     0.01     // test show: 0.001 is better than 0.01
-#define Q_OMEGA     0.0003   // test show: 0.005 is better than 0.0003
-#define R_ANGLE     0.01     // test show: 0.1 is better than 0.01
+#define Q_ANGLE     0.001   // test show: 0.001 is better than 0.01
+#define Q_OMEGA     0.005   // test show: 0.005 is better than 0.0003
+#define R_ANGLE     0.1     // test show: 0.1 is better than 0.01
 
     static float klm_angle = 0; // kalman fiter output
     static float bias = 0;

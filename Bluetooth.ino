@@ -54,15 +54,15 @@ void argsAdjustSaveData(void)
 
 void sendArgsData(void)
 {
-    int angleP = (int)(CarArgs.angleCtrlP * 1000);
-    int angleI = (int)(CarArgs.angleCtrlI * 1000);
-    int angleD = (int)(CarArgs.angleCtrlD * 1000);
+    int angleP = (int)(CarArgs.angleCtrlP * 100);
+    int angleI = (int)(CarArgs.angleCtrlI * 100);
+    int angleD = (int)(CarArgs.angleCtrlD * 100);
 
-    int speedP = (int)(CarArgs.speedCtrlP * 1000);
-    int speedI = (int)(CarArgs.speedCtrlI * 1000);
-    int speedD = (int)(CarArgs.speedCtrlD * 1000);
+    int speedP = (int)(CarArgs.speedCtrlP * 100);
+    int speedI = (int)(CarArgs.speedCtrlI * 100);
+    int speedD = (int)(CarArgs.speedCtrlD * 100);
 
-    int deadVal= (int)(CarArgs.motorDeadVal * 1000);
+    int deadVal= (int)(CarArgs.motorDeadVal * 100);
 
     // print angle PID args
     Serial3.print("angle\nP:");
@@ -122,7 +122,7 @@ static int str2int(void)
         }
         else
         {
-            Serial3.println(" is not a digit number!");
+            Serial3.println("Formate error!");
         }
 
         while(!Serial3.available())

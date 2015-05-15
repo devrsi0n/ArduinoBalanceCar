@@ -1,8 +1,6 @@
 #ifndef __ANGLE__H
 #define __ANGLE__H
 
-#include <MPU6050.h>
-
 #define MAX_ANGLE   25
 #define MIN_ANGLE   -25
 
